@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tes Kepribadian.exe</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{background:#c0c0c0;font-family:Tahoma;display:flex;justify-content:center;align-items:center;height:100vh;}
+.window{width:360px;background:#ececec;border:2px solid #000;box-shadow:4px 4px 0 #000;}
+.titlebar{background:#000080;color:#fff;padding:5px;font-weight:bold;}
+.content{padding:15px;text-align:center;}
+.progress{height:8px;background:#999;margin-bottom:10px;}
+.progress-bar{height:100%;width:0%;background:#000080;}
+button{width:100%;margin:5px 0;padding:8px;border:2px solid #000;background:#dcdcdc;cursor:pointer;}
+button:active{transform:scale(0.95);}
+.popup{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;justify-content:center;align-items:center;}
+.popup-box{background:#fff;padding:20px;border:2px solid #000;width:300px;}
+.small-btn{font-size:11px;padding:5px;}
+</style>
+</head>
+
+<body>
+
+<!-- POPUP -->
+<div class="popup" id="popup">
+  <div class="popup-box">
+    <h3>⚠️ Disclaimer</h3>
+    <p>Tes ini tidak 100% akurat 😳</p>
+    <input id="nameInput" placeholder="Masukkan nama..." style="width:100%;padding:5px;margin:10px 0;">
+    <button onclick="startQuiz()">Mulai</button>
+  </div>
+</div>
+
+<div class="window">
+  <div class="titlebar">Tes Kepribadian.exe</div>
+  <div class="content">
+
+    <div class="progress"><div class="progress-bar" id="bar"></div></div>
+
+    <h3 id="question"></h3>
+    <div id="answers"></div>
+    <div id="result"></div>
+
+    <canvas id="chart"></canvas>
+
+    <button id="repeatBtn" style="display:none;">🔁 Ulangi</button>
+    <button id="clearHistory" class="small-btn">🗑️ Hapus History</button>
+
+    <div id="history" style="font-size:12px;text-align:left;margin-top:10px;"></div>
+
+  </div>
+</div>
+
+<!-- 🔊 SOUND -->
+<audio id="s1" src="https://www.soundjay.com/button/sounds/button-09.mp3"></audio>
+<audio id="s2" src="https://www.soundjay.com/button/sounds/button-10.mp3"></audio>
+<audio id="s3" src="https://www.soundjay.com/button/sounds/button-4.mp3"></audio>
+
+<script>
+const quiz=[ /* tetap 20 soal */
+  {q:"Kamu tertarik ke…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Dua-duanya",s:1}]},
+  {q:"Kalau lihat orang menarik…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Dua",s:1}]},
+  {q:"Dalam film kamu notice…",a:[{t:"Aktor",s:2},{t:"Aktris",s:0},{t:"Story",s:1}]},
+  {q:"Kalau flirting…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Tergantung",s:1}]},
+  {q:"Pilih karakter game…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Random",s:1}]},
+  {q:"Nyaman ngobrol…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Keduanya",s:1}]},
+  {q:"Feed kamu…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Campur",s:1}]},
+  {q:"Kalau suka…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Gak tentu",s:1}]},
+  {q:"Temen bilang…",a:[{t:"Mencurigakan",s:2},{t:"Normal",s:0},{t:"Ambigu",s:1}]},
+  {q:"Nonton romance…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Story",s:1}]},
+  {q:"Kalau mimpi…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Random",s:1}]},
+  {q:"Ngefans…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Dua",s:1}]},
+  {q:"Pilih pasangan…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Fleksibel",s:1}]},
+  {q:"Lihat foto…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Dua",s:1}]},
+  {q:"Di mall…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Campur",s:1}]},
+  {q:"Gabut…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Random",s:1}]},
+  {q:"Jujur…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Gak yakin",s:1}]},
+  {q:"Chat…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Biasa",s:1}]},
+  {q:"Diajak jalan…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Tergantung",s:1}]},
+  {q:"Feeling…",a:[{t:"Cowok",s:2},{t:"Cewek",s:0},{t:"Campur",s:1}]}
+];
+
+let i=0,score=0,name="";
+const s1=document.getElementById("s1");
+const s2=document.getElementById("s2");
+const s3=document.getElementById("s3");
+
+function play(type){
+  let s = type===1?s1:type===2?s2:s3;
+  s.currentTime=0;
+  s.play().catch(()=>{});
+}
+
+function vibrate(p){
+  if("vibrate" in navigator) navigator.vibrate(p);
+}
+
+function startQuiz(){
+  name=document.getElementById("nameInput").value||"Anonim";
+  document.getElementById("popup").style.display="none";
+  document.body.click(); // trigger audio
+  load();
+}
+
+function load(){
+  let q=quiz[i];
+  document.getElementById("question").innerText=q.q;
+  let ans=document.getElementById("answers");
+  ans.innerHTML="";
+
+  q.a.forEach((o,idx)=>{
+    let b=document.createElement("button");
+    b.innerText=o.t;
+
+    b.onclick=()=>{
+      play(idx); // 🔊 beda sound
+      vibrate([30,50,30]); // 📳 klik
+
+      score+=o.s;
+      i++;
+
+      document.getElementById("bar").style.width=(i/quiz.length*100)+"%";
+
+      if(i<quiz.length) load();
+      else result();
+    };
+
+    ans.appendChild(b);
+  });
+}
+
+function result(){
+  vibrate([200,100,300]); // 📳 hasil
+
+  let r=score>=30?"💀 Suka cowok banget":
+        score>=20?"👀 Fleksibel":
+        score>=10?"🤔 Abu-abu":"😎 Straight";
+
+  document.getElementById("question").innerText="Hasil:";
+  document.getElementById("answers").innerHTML="";
+  document.getElementById("result").innerText=name+" → "+r;
+
+  new Chart(document.getElementById("chart"),{
+    type:"bar",
+    data:{labels:["Cowok","Cewek"],datasets:[{data:[score,(quiz.length*2)-score]}]}
+  });
+
+  let h=JSON.parse(localStorage.getItem("h"))||[];
+  h.push({name,r});
+  localStorage.setItem("h",JSON.stringify(h));
+
+  renderHistory();
+
+  let btn=document.getElementById("repeatBtn");
+  btn.style.display="block";
+  btn.onclick=resetQuiz;
+}
+
+function renderHistory(){
+  let h=JSON.parse(localStorage.getItem("h"))||[];
+  let div=document.getElementById("history");
+  div.innerHTML="<b>History:</b><br>";
+  h.slice(-5).reverse().forEach(x=>{
+    div.innerHTML+=x.name+" - "+x.r+"<br>";
+  });
+}
+
+function resetQuiz(){
+  i=0;score=0;
+  document.getElementById("popup").style.display="flex";
+  document.getElementById("result").innerText="";
+  document.getElementById("answers").innerHTML="";
+  document.getElementById("question").innerText="";
+  document.getElementById("bar").style.width="0%";
+  document.getElementById("repeatBtn").style.display="none";
+
+  let ctx=document.getElementById("chart").getContext("2d");
+  ctx.clearRect(0,0,300,150);
+}
+
+document.getElementById("clearHistory").onclick=()=>{
+  localStorage.removeItem("h");
+  renderHistory();
+};
+
+renderHistory();
+</script>
+
+</body>
+  </html>
